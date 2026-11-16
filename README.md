@@ -40,3 +40,12 @@ spatial axes from the rank:
 
 All other keys of the input latent dict (e.g. `noise_mask`) are passed through
 unchanged to each of the four outputs.
+
+## Nested / AV latents (e.g. MiniMax H3)
+
+Some models (MiniMax H3) pack several streams into one latent: `samples` is a
+ComfyUI `NestedTensor` holding `[video [B, 24, T, H, W], audio [B, 32, 2, T]]`.
+The node splits the **first stream** (video/image) into the 4 quadrants and passes
+all other streams (e.g. audio) through **unchanged** to every output — audio has no
+spatial plane, so it must stay full-length. Each output is again a nested latent of
+the same structure, so downstream nodes (sampler, VAE decode) keep working.
