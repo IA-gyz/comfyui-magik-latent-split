@@ -1,7 +1,7 @@
 # ComfyUI Magik Latent Split
 
 Custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that splits one
-latent into **4 equal latents**.
+latent into **4 equal latents** spatially — a 2×2 grid of quadrants.
 
 ## Install
 
@@ -15,22 +15,28 @@ git clone https://github.com/IA-gyz/comfyui-magik-latent-split.git \
 ## Usage
 
 Add the **Magik Latent Split** node (category `latent/magik`), feed a `LATENT` into it,
-and connect the four outputs `latent_1` .. `latent_4` wherever you need them.
+and connect the four outputs `top_left`, `top_right`, `bottom_left`, `bottom_right`.
+
+Example: a 256×256 latent is split into four **128×128** latents (each side is halved,
+so 4 pieces tile the original). Note that 64×64 pieces from a 256×256 latent would be a
+4×4 grid, i.e. 16 latents, not 4.
+
+## What each output keeps
+
+Each output latent keeps the full channel depth `C` and — for video latents — **all
+frames** `T`. Only the spatial plane is cut: each output holds one quadrant at
+`H/2 × W/2`. Placed back into a 2×2 grid, the four outputs reconstruct the original
+latent exactly. `H` and `W` must both be even, otherwise the node raises an error.
 
 ## Video vs image latents
 
-Yes, it makes a difference — the two latent kinds have different tensor ranks, and the
-node picks the split axis from the rank:
+The split is spatial for both; only the tensor rank differs, and the node picks the
+spatial axes from the rank:
 
-| Latent kind | Samples shape | Split axis | Result |
+| Latent kind | Samples shape | Split axes | Result |
 |---|---|---|---|
-| Video (e.g. Wan/LTXV VAE) | `[B, C, T, H, W]` (5D) | frames `T` (dim 2) | 4 latents, each with a quarter of the frames |
-| Image | `[B, C, H, W]` (4D) | batch `B` (dim 0) | 4 latents, each with a quarter of the batch |
-
-An image latent is 4D and has no frame axis, so it can only be split along the batch
-dimension. A single image (batch size 1) therefore cannot be split and the node raises
-a clear error. The same error is raised whenever the split dimension is not divisible
-by 4 (e.g. a video with 7 frames).
+| Image | `[B, C, H, W]` (4D) | H, W (dims 2, 3) | 4 latents of `[B, C, H/2, W/2]` |
+| Video (e.g. Wan/LTXV VAE) | `[B, C, T, H, W]` (5D) | H, W (dims 3, 4) | 4 latents of `[B, C, T, H/2, W/2]` — every frame, quarter resolution |
 
 All other keys of the input latent dict (e.g. `noise_mask`) are passed through
 unchanged to each of the four outputs.

@@ -1,6 +1,4 @@
 class MagikLatentSplit:
-    SPLIT_COUNT = 4
-
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -9,13 +7,14 @@ class MagikLatentSplit:
             }
         }
 
-    RETURN_TYPES = ("LATENT",) * SPLIT_COUNT
-    RETURN_NAMES = tuple(f"latent_{i + 1}" for i in range(SPLIT_COUNT))
+    RETURN_TYPES = ("LATENT",) * 4
+    RETURN_NAMES = ("top_left", "top_right", "bottom_left", "bottom_right")
     FUNCTION = "split"
     CATEGORY = "latent/magik"
     DESCRIPTION = (
-        "Splits a latent into 4 equal latents. Video latents [B, C, T, H, W] are "
-        "split along the frame axis; image latents [B, C, H, W] along the batch axis."
+        "Splits a latent into 4 spatial quadrants (2x2 grid): top-left, top-right, "
+        "bottom-left, bottom-right. Supports image latents [B, C, H, W] and video "
+        "latents [B, C, T, H, W]; H and W must be even."
     )
 
     def split(self, latent):
@@ -24,29 +23,29 @@ class MagikLatentSplit:
         samples = latent["samples"]
         ndim = len(samples.shape)
         if ndim == 5:
-            dim = 2
-            axis = "frames"
+            h_dim, w_dim = 3, 4
         elif ndim == 4:
-            dim = 0
-            axis = "batch"
+            h_dim, w_dim = 2, 3
         else:
             raise ValueError(
                 f"MagikLatentSplit: expected a 4D image latent [B, C, H, W] or a 5D "
                 f"video latent [B, C, T, H, W], got {ndim}D samples with shape "
                 f"{tuple(samples.shape)}"
             )
-        size = samples.shape[dim]
-        if size % self.SPLIT_COUNT != 0:
+        h, w = samples.shape[h_dim], samples.shape[w_dim]
+        if h % 2 != 0 or w % 2 != 0:
             raise ValueError(
-                f"MagikLatentSplit: cannot split {size} {axis} into "
-                f"{self.SPLIT_COUNT} equal parts (samples shape {tuple(samples.shape)})"
+                f"MagikLatentSplit: cannot split H={h}, W={w} into 4 equal quadrants "
+                f"(both must be even; samples shape {tuple(samples.shape)})"
             )
-        step = size // self.SPLIT_COUNT
+        h_step, w_step = h // 2, w // 2
         outputs = []
-        for i in range(self.SPLIT_COUNT):
-            index = [slice(None)] * ndim
-            index[dim] = slice(i * step, (i + 1) * step)
-            out = dict(latent)
-            out["samples"] = samples[tuple(index)]
-            outputs.append(out)
+        for row in range(2):
+            for col in range(2):
+                index = [slice(None)] * ndim
+                index[h_dim] = slice(row * h_step, (row + 1) * h_step)
+                index[w_dim] = slice(col * w_step, (col + 1) * w_step)
+                out = dict(latent)
+                out["samples"] = samples[tuple(index)]
+                outputs.append(out)
         return tuple(outputs)
