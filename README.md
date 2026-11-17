@@ -21,7 +21,17 @@ Example: a 256×256 latent is split into four **128×128** latents (each side is
 so 4 pieces tile the original). Note that 64×64 pieces from a 256×256 latent would be a
 4×4 grid, i.e. 16 latents, not 4.
 
-## What each output keeps
+## Magik Latent Merge
+
+The **Magik Latent Merge** node (category `latent/magik`) is the inverse of the
+split: feed it the four quadrant outputs (`top_left`, `top_right`, `bottom_left`,
+`bottom_right`) and it returns a single recombined latent. Quadrants are joined
+column-wise in each row, then row-wise (`cat` along W, then along H). For nested
+AV latents the video streams are merged and the audio stream is taken from the
+`top_left` input (all four carry the same audio after a split). Quadrant shapes
+must be consistent, otherwise the node raises a clear error.
+
+## What each split output keeps
 
 Each output latent keeps the full channel depth `C` and — for video latents — **all
 frames** `T`. Only the spatial plane is cut: each output holds one quadrant at
