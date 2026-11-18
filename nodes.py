@@ -172,3 +172,72 @@ class MagikLatentMerge:
         out = dict(top_left)
         out["samples"] = merged
         return (out,)
+
+
+class MagikSeparateAVLatent:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "av_latent": ("LATENT",),
+            }
+        }
+
+    RETURN_TYPES = ("LATENT", "LATENT")
+    RETURN_NAMES = ("video", "audio")
+    FUNCTION = "separate"
+    CATEGORY = "latent/magik"
+    DESCRIPTION = (
+        "Splits a nested AV latent (e.g. MiniMax H3: video [B, 24, T, H, W] + audio "
+        "[B, 32, 2, T]) into its video and audio streams as two separate latents."
+    )
+
+    def separate(self, av_latent):
+        if "samples" not in av_latent:
+            raise ValueError("MagikSeparateAVLatent: input latent has no 'samples' tensor")
+        samples = av_latent["samples"]
+        if (
+            not getattr(samples, "is_nested", False)
+            or not hasattr(samples, "tensors")
+            or len(samples.tensors) != 2
+        ):
+            raise ValueError(
+                "MagikSeparateAVLatent: expects a nested AV latent with exactly 2 "
+                "streams (video, audio), got is_nested="
+                f"{getattr(samples, 'is_nested', False)}"
+            )
+        video = dict(av_latent)
+        video["samples"] = samples.tensors[0]
+        audio = dict(av_latent)
+        audio["samples"] = samples.tensors[1]
+        return (video, audio)
+
+
+class MagikConcatAVLatent:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "video": ("LATENT",),
+                "audio": ("LATENT",),
+            }
+        }
+
+    RETURN_TYPES = ("LATENT",)
+    RETURN_NAMES = ("av_latent",)
+    FUNCTION = "concat"
+    CATEGORY = "latent/magik"
+    DESCRIPTION = (
+        "Packs a video latent and an audio latent into a nested AV latent "
+        "(inverse of Magik Separate AV Latent)."
+    )
+
+    def concat(self, video, audio):
+        for name, lat in (("video", video), ("audio", audio)):
+            if "samples" not in lat:
+                raise ValueError(f"MagikConcatAVLatent: input '{name}' has no 'samples' tensor")
+        from comfy.nested_tensor import NestedTensor
+
+        out = dict(video)
+        out["samples"] = NestedTensor((video["samples"], audio["samples"]))
+        return (out,)

@@ -51,6 +51,20 @@ spatial axes from the rank:
 All other keys of the input latent dict (e.g. `noise_mask`) are passed through
 unchanged to each of the four outputs.
 
+## Magik Separate / Concat AV Latent
+
+For nested AV latents (MiniMax H3: `NestedTensor([video [B, 24, T, H, W], audio
+[B, 32, 2, T]])`):
+
+- **Magik Separate AV Latent** takes the AV latent and returns two plain latents,
+  `video` and `audio` (the two nested streams, unwrapped).
+- **Magik Concat AV Latent** takes a `video` latent and an `audio` latent and packs
+  them back into a nested AV latent — the inverse of Separate.
+
+Typical chain: Separate AV → split `video` with **Magik Latent Split** (audio stays
+whole) → process quadrants → **Magik Latent Merge** → Concat AV with the original
+`audio` → VAE decode once.
+
 ## Nested / AV latents (e.g. MiniMax H3)
 
 Some models (MiniMax H3) pack several streams into one latent: `samples` is a
