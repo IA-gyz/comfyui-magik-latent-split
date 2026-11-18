@@ -245,10 +245,11 @@ class MagikConcatAVLatent:
 
 class MagikLatentSplitAdvanced:
     RETURN_NAMES = (
-        "top_left", "tl_video", "tl_audio",
-        "top_right", "tr_video", "tr_audio",
-        "bottom_left", "bl_video", "bl_audio",
-        "bottom_right", "br_video", "br_audio",
+        "top_left", "tl_video",
+        "top_right", "tr_video",
+        "bottom_left", "bl_video",
+        "bottom_right", "br_video",
+        "audio",
     )
 
     @classmethod
@@ -259,15 +260,16 @@ class MagikLatentSplitAdvanced:
             }
         }
 
-    RETURN_TYPES = ("LATENT",) * 12
+    RETURN_TYPES = ("LATENT",) * 9
     FUNCTION = "split"
     CATEGORY = "latent/magik"
     DESCRIPTION = (
         "Advanced Magik Latent Split: for each of the 4 spatial quadrants it outputs "
-        "the quadrant latent plus the single video and single audio stream latents. "
-        "For nested AV latents (e.g. MiniMax H3) the quadrant outputs stay nested and "
-        "the audio outputs carry the full (uncut) audio stream. For plain latents "
-        "the *_video and *_audio outputs mirror the quadrant."
+        "the quadrant latent plus the single video stream latent, and one shared "
+        "audio output. For nested AV latents (e.g. MiniMax H3) the quadrant outputs "
+        "stay nested and the audio output carries the full (uncut) audio stream. "
+        "For plain latents the *_video outputs mirror the quadrant and the audio "
+        "output passes the input through uncut."
     )
 
     def split(self, latent):
@@ -276,7 +278,7 @@ class MagikLatentSplitAdvanced:
         samples = latent["samples"]
         if getattr(samples, "is_nested", False) and hasattr(samples, "tensors") and samples.tensors:
             streams = list(samples.tensors)
-            audio_stream = streams[1] if len(streams) > 1 else None
+            audio_stream = streams[1] if len(streams) > 1 else streams[0]
             passthrough = streams[1:]
             quadrants = MagikLatentSplit._quadrants(streams[0])
             outputs = []
@@ -285,9 +287,10 @@ class MagikLatentSplitAdvanced:
                 quad_out["samples"] = type(samples)([quadrant, *passthrough])
                 video_out = dict(latent)
                 video_out["samples"] = quadrant
-                audio_out = dict(latent)
-                audio_out["samples"] = audio_stream if audio_stream is not None else quadrant
-                outputs.extend((quad_out, video_out, audio_out))
+                outputs.extend((quad_out, video_out))
+            audio_out = dict(latent)
+            audio_out["samples"] = audio_stream
+            outputs.append(audio_out)
             return tuple(outputs)
         quadrants = MagikLatentSplit._quadrants(samples)
         outputs = []
@@ -296,7 +299,8 @@ class MagikLatentSplitAdvanced:
             quad_out["samples"] = quadrant
             video_out = dict(latent)
             video_out["samples"] = quadrant
-            audio_out = dict(latent)
-            audio_out["samples"] = quadrant
-            outputs.extend((quad_out, video_out, audio_out))
+            outputs.extend((quad_out, video_out))
+        audio_out = dict(latent)
+        audio_out["samples"] = samples
+        outputs.append(audio_out)
         return tuple(outputs)

@@ -54,18 +54,19 @@ unchanged to each of the four outputs.
 ## Magik Latent Split Advanced
 
 The **Magik Latent Split Advanced** node (category `latent/magik`) extends the split
-to 12 outputs — per quadrant the quadrant latent itself plus the single video and
-single audio stream:
+to 9 outputs — per quadrant the quadrant latent itself plus the single video stream,
+and one shared audio output:
 
-`top_left, tl_video, tl_audio, top_right, tr_video, tr_audio, bottom_left, bl_video,
-bl_audio, bottom_right, br_video, br_audio`
+`top_left, tl_video, top_right, tr_video, bottom_left, bl_video, bottom_right,
+br_video, audio`
 
 For a nested AV latent (MiniMax H3) the `top_left`/... outputs stay nested AV
 quadrants (same as **Magik Latent Split**), `*_video` is the plain video quadrant,
-and `*_audio` is the full audio stream (audio has no spatial plane, so it is passed
-uncut — identical on all four audio outputs). For a plain (non-nested) latent the
-`*_video` and `*_audio` outputs mirror the quadrant. The four quadrant outputs feed
-straight into **Magik Latent Merge**.
+and the single `audio` output is the full audio stream (audio has no spatial plane,
+so it is passed uncut — no need to duplicate it per quadrant). For a plain
+(non-nested) latent the `*_video` outputs mirror the quadrant and `audio` passes the
+input through uncut. The four quadrant outputs feed straight into
+**Magik Latent Merge**.
 
 ## Magik Separate / Concat AV Latent
 
