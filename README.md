@@ -51,6 +51,22 @@ spatial axes from the rank:
 All other keys of the input latent dict (e.g. `noise_mask`) are passed through
 unchanged to each of the four outputs.
 
+## Magik Latent Split Advanced
+
+The **Magik Latent Split Advanced** node (category `latent/magik`) extends the split
+to 12 outputs — per quadrant the quadrant latent itself plus the single video and
+single audio stream:
+
+`top_left, tl_video, tl_audio, top_right, tr_video, tr_audio, bottom_left, bl_video,
+bl_audio, bottom_right, br_video, br_audio`
+
+For a nested AV latent (MiniMax H3) the `top_left`/... outputs stay nested AV
+quadrants (same as **Magik Latent Split**), `*_video` is the plain video quadrant,
+and `*_audio` is the full audio stream (audio has no spatial plane, so it is passed
+uncut — identical on all four audio outputs). For a plain (non-nested) latent the
+`*_video` and `*_audio` outputs mirror the quadrant. The four quadrant outputs feed
+straight into **Magik Latent Merge**.
+
 ## Magik Separate / Concat AV Latent
 
 For nested AV latents (MiniMax H3: `NestedTensor([video [B, 24, T, H, W], audio
